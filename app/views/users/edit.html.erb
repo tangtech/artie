@@ -1,0 +1,12 @@
+<% provide(:title, "Change Password") %>
+<h1>Change Password</h1>
+
+<div class="row">
+  <div class="span6 offset3">
+    <%= form_for(@user) do |f| %>
+        <%= render 'shared/error_messages', object: f.object %>
+        <%= render 'fields_password', f: f %>
+        <%= f.submit "Save changes", class: "btn btn-large btn-primary" %>
+    <% end %>
+  </div>
+</div>

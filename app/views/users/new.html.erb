@@ -1,0 +1,13 @@
+<% provide(:title, 'Add New User') %>
+<h1>Add New User</h1>
+
+<div class="row">
+  <div class="span6 offset3">
+    <%= form_for(@user) do |f| %>
+        <%= render 'shared/error_messages', object: f.object %>
+        <%= render 'fields_name', f: f %>
+        <%= render 'fields_password', f: f %>
+        <%= f.submit "Add New User", class: "btn btn-large btn-primary" %>
+    <% end %>
+  </div>
+</div>

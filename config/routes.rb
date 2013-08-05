@@ -1,4 +1,15 @@
 Artie::Application.routes.draw do
+  resources :users
+  resources :sessions, only: [:new, :create, :destroy]
+  resources :customers
+
+  root to: 'static_pages#home'
+  match '/rfq', to: 'static_pages#rfq'
+  match '/createcustomer',  to: 'customers#new'
+  match '/createuser',  to: 'users#new'
+  match '/signin',  to: 'sessions#new'
+  match '/signout', to: 'sessions#destroy', via: :delete
+
   # The priority is based upon order of creation:
   # first created -> highest priority.
 

@@ -28,8 +28,19 @@ GEM
     activesupport (3.2.13)
       i18n (= 0.6.1)
       multi_json (~> 1.0)
+    annotate (2.5.0)
+      rake
     arel (3.0.2)
+    atk (2.0.2-x86-mingw32)
+      glib2 (= 2.0.2)
+    bcrypt-ruby (3.0.1-x86-mingw32)
+    bootstrap-sass (2.3.2.1)
+      sass (~> 3.2)
+    bootstrap-will_paginate (0.0.9)
+      will_paginate
     builder (3.0.4)
+    cairo (1.12.6-x86-mingw32)
+      pkg-config
     coffee-rails (3.2.2)
       coffee-script (>= 2.2.0)
       railties (~> 3.2.0)
@@ -40,6 +51,16 @@ GEM
     erubis (2.7.0)
     execjs (1.4.0)
       multi_json (~> 1.0)
+    faker (1.1.2)
+      i18n (~> 0.5)
+    gdk_pixbuf2 (2.0.2-x86-mingw32)
+      glib2 (= 2.0.2)
+    glib2 (2.0.2-x86-mingw32)
+      pkg-config
+    gtk2 (2.0.2-x86-mingw32)
+      atk (= 2.0.2)
+      gdk_pixbuf2 (= 2.0.2)
+      pango (= 2.0.2)
     hike (1.2.3)
     i18n (0.6.1)
     journey (1.0.4)
@@ -52,7 +73,13 @@ GEM
       treetop (~> 1.4.8)
     mime-types (1.23)
     multi_json (1.7.8)
+    pango (2.0.2-x86-mingw32)
+      cairo (>= 1.12.5)
+      glib2 (= 2.0.2)
+    pg (0.16.0-x86-mingw32)
+    pkg-config (1.1.4)
     polyglot (0.3.3)
+    poppler (2.0.2-x86-mingw32)
     rack (1.4.5)
     rack-cache (1.2)
       rack (>= 0.4)
@@ -98,14 +125,24 @@ GEM
     uglifier (2.1.2)
       execjs (>= 0.3.0)
       multi_json (~> 1.0, >= 1.0.2)
+    will_paginate (3.0.4)
 
 PLATFORMS
   x86-mingw32
 
 DEPENDENCIES
+  annotate (= 2.5.0)
+  bcrypt-ruby (= 3.0.1)
+  bootstrap-sass (= 2.3.2.1)
+  bootstrap-will_paginate (= 0.0.9)
   coffee-rails (~> 3.2.1)
+  faker (= 1.1.2)
+  gtk2 (= 2.0.2)
   jquery-rails
+  pg
+  poppler (= 2.0.2)
   rails (= 3.2.13)
   sass-rails (~> 3.2.3)
-  sqlite3
+  sqlite3 (= 1.3.7)
   uglifier (>= 1.0.3)
+  will_paginate (= 3.0.4)

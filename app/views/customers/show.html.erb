@@ -1,0 +1,11 @@
+<% provide(:title, @customer.name) %>
+<div class="row">
+  <aside class="span4">
+    <section>
+      <h1>
+        <%= @customer.name %>
+      </h1>
+      <%= @customer.short_name %> <%= @customer.branch %> | <%= @customer.domain %>
+    </section>
+  </aside>
+</div>
