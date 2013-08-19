@@ -1,9 +1,7 @@
-                                                    #!/usr/bin/env ruby
-
 require "gtk2"
 require "poppler"
 
-input_uri = "BB2.pdf"
+input_uri = "BB1.pdf"
 input_text = ''
 
 doc = Poppler::Document.new(input_uri)
@@ -17,7 +15,7 @@ PSL_REGEX = /PSL\s*:.*/i
 TEMP_REGEX = /Temp\s*:.*/i
 MATERIAL_CLASS_REGEX = /Class\s*:.*/i
 PROCESSES_REGEX = /PROCESS SPECIFICATION\s*:.*/m
-CUSTOMER_SPEC_REGEX1 = /\w{1,2}-\d{3}.*/i
+CUSTOMER_SPEC_REGEX1 = /[A-Z]{1,2}-\d{3}.*/i
 CUSTOMER_SPEC_REGEX2 = /- - -.*/i
 MATERIAL_SPEC_REGEX1 = /MS-\d{3}.*/i
 MATERIAL_SPEC_REGEX2 = /.*MATERIAL REQUIREMENT.*/i
