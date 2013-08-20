@@ -1,7 +1,7 @@
 require "gtk2"
 require "poppler"
 
-input_uri = "BB2.pdf"
+input_uri = "BB4.pdf"
 input_bom_text = ''
 input_dwg_text = ''
 
@@ -66,12 +66,6 @@ part["process_specification_short"] = []
 part["process_specification_full"] = []
 part["stamping_specification_full"] = []
 
-MATCH_DRAWING_REGEX = /#{part["drawing_number"]}.*/
-drawing = {}
-drawing["drawing_number"] = MATCH_DRAWING_REGEX.match(input_dwg_text).to_s.split(" ")[0].to_s.strip
-drawing["drawing_revision"] = MATCH_DRAWING_REGEX.match(input_dwg_text).to_s.split(" ")[1].to_s.strip
-puts "Drawing Match" if part["drawing_number"]==drawing["drawing_number"] && part["drawing_revision"]==drawing["drawing_revision"]
-
 this_process = nil
 processes = PROCESSES_REGEX.match(input_bom_text).to_s.split(/\r?\n/)
 
@@ -104,6 +98,15 @@ part["stamping_type"] = part["stamping_specification_full"][0].split(" ")[1]
 part["stamping_information"] = part["stamping_specification_full"].join(" ").split(":")
 part["stamping_information"].shift
 part["stamping_information"] = part["stamping_information"].join(":").strip
+
+MATCH_DRAWING_REGEX = /#{part["drawing_number"]}.*/
+drawing = {}
+drawing["drawing_number"] = MATCH_DRAWING_REGEX.match(input_dwg_text).to_s.split(" ")[0].to_s.strip
+drawing["drawing_revision"] = MATCH_DRAWING_REGEX.match(input_dwg_text).to_s.split(" ")[1].to_s.strip
+puts "ERROR: Drawing Mismatch" if part["drawing_number"]!=drawing["drawing_number"] || part["drawing_revision"]!=drawing["drawing_revision"]
+
+drawing["threads"] = []
+# Match: ACME, SA, NA, UN, UNC, UNF, UNS, NPT, API LP, LINE PIPE, SHARP VEE, IF
 
 puts part
 puts drawing
