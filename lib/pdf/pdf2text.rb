@@ -1,7 +1,7 @@
 require "gtk2"
 require "poppler"
 
-input_uri = "BB4.pdf"
+input_uri = "BB10.pdf"
 input_bom_text = ''
 input_drawing_text = ''
 
@@ -27,9 +27,13 @@ NDE_SPEC_REGEX2 = /PS-108.*/i
 part = {}
 drawing = {}
 
-IO.popen("pdftk #{input_uri} burst") {|f| $stderr.puts "#{f} Split PDF file"}
-File.delete("doc_data.txt")
 doc = Poppler::Document.new(input_uri)
+if doc.n_pages == 1
+  IO.popen("copy #{input_uri} pg_0001.pdf") {|f| $stderr.puts "#{f} 1-page PDF file"}
+else
+  IO.popen("pdftk #{input_uri} burst") {|f| $stderr.puts "#{f} Split PDF file"}
+  File.delete("doc_data.txt")
+end
 doc.each do |page|
   this_page = page.index + 1
   if BOM_REGEX.match(page.get_text)
@@ -103,6 +107,7 @@ processes.each do |line|
   end
 end
 
+# The following lines break the script if no BOM
 part["stamping_type"] = part["stamping_specification_full"][0].split(" ")[1]
 part["stamping_information"] = part["stamping_specification_full"].join(" ").split(":")
 part["stamping_information"].shift
@@ -122,7 +127,7 @@ end
 puts "ERROR: Drawing Mismatch" if part["drawing_number"]!=drawing["drawing_number"] || part["drawing_revision"]!=drawing["drawing_revision"]
 
 drawing["threads"] = []
-ACME_THREAD_REGEX = /\d*\s?\d+\/?\d*-\d+ (ACME|NA|STUB ACME|SA)-\d\w/i
+ACME_THREAD_REGEX = /\d*\s?\d+\/?\d*-\d+ (ACME|NA|STUB ACME|SA)-\d\w(-LH)?/i
 API_THREAD_REGEX = /\d*\s?-?\d+\/?\d* (API IF|API LP|API UPTBG|IF[^C]|NPT|EU)/i
 SHARPVEE_THREAD_REGEX = /SHARP VEE THD/i
 UN_THREAD_REGEX = /\d*\s?\d+\/?\d*-\d+ (UN|UNC|UNF|UNS)-\d\w/i
