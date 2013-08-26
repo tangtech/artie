@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+require "rubygems"
+require "bundler/setup"
+require "mailman"
+
+require File.dirname(__FILE__) + "/../config/environment"
+Mailman.config.ignore_stdin = true
+
+Mailman.config.pop3 = {
+    server: 'pop.gmail.com', port: 995, ssl: true,
+    username: GMAIL_USERNAME,
+    password: GMAIL_PASSWORD
+}
+
+Mailman::Application.run do
+  default do
+    email = {}
+    if message.multipart?
+      email["html"] = message.html_part.body.decoded  # parsing of html content of the email
+      email["text"] = message.text_part.body.decoded  # parsing of text content of the email
+      email["attachments"] = []   # an array which can be used to store object records of the attachments
+      message.attachments.each do |attachment|
+        file = StringIO.new(attachment.decoded)
+        file.class.class_eval { attr_accessor :original_filename, :content_type }
+        file.original_filename = attachment.filename
+        file.content_type = attachment.mime_type
+        email["attachments"] << attachment   # adding all attachment objects one by one in the array
+      end
+    else
+      email["html"] = message.body.decoded    # in this case its a plain email so html body is same as text body
+      email["text"] = message.body.decoded
+      email["attachments"] = []   # no attachments
+    end
+    puts email
+  end
+end

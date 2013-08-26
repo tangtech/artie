@@ -19,8 +19,7 @@ gem 'will_paginate',           '3.0.4'
 gem 'bootstrap-will_paginate', '0.0.9'
 gem 'gtk2',                    '2.0.2'
 gem 'poppler',                 '2.0.2'
-gem 'daemons',                 '1.1.9'
-gem 'mailman',                 '0.7.0'
+gem 'mailman',                 '0.7.0',  require: false
 
 group :development do
   gem 'sqlite3', '1.3.7'
