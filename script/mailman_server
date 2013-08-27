@@ -15,8 +15,8 @@ Mailman.config.pop3 = {
 Mailman::Application.run do
   default do
     begin
-      the_message_html = (message.multipart? ? message.html_part.body.decoded : message.body.decoded)
-      the_message_text = (message.multipart? ? message.text_part.body.decoded : message.body.decoded)
+      the_message_html = (message.multipart? ? message.html_part.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8")  : message.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8"))
+      the_message_text = (message.multipart? ? message.text_part.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8")  : message.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8"))
       @incoming_rfq = IncomingRfq.create(:from => message.from.first, :subject => message.subject, :html_body => the_message_html, :text_body => the_message_text)
 
       if message.multipart?
