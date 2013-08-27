@@ -34,4 +34,6 @@ Artie::Application.configure do
 
   # Expands the lines which load the assets
   config.assets.debug = true
+
+  Paperclip.options[:command_path] = "/cygdrive/c/Program Files/ImageMagick-6.8.6-Q16/"
 end

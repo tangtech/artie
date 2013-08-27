@@ -1,0 +1,10 @@
+<% provide(:title, 'List All Incoming RFQs') %>
+<h1>List All Incoming RFQs</h1>
+
+<%= will_paginate %>
+
+<ul class="incoming_rfqs">
+  <%= render @incoming_rfqs %>
+</ul>
+
+<%= will_paginate %>

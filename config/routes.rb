@@ -2,6 +2,7 @@ Artie::Application.routes.draw do
   resources :users
   resources :sessions, only: [:new, :create, :destroy]
   resources :customers
+  resources :incoming_rfqs
 
   root to: 'static_pages#home'
   match '/rfq', to: 'static_pages#rfq'

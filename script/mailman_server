@@ -14,23 +14,29 @@ Mailman.config.pop3 = {
 
 Mailman::Application.run do
   default do
-    email = {}
-    if message.multipart?
-      email["html"] = message.html_part.body.decoded  # parsing of html content of the email
-      email["text"] = message.text_part.body.decoded  # parsing of text content of the email
-      email["attachments"] = []   # an array which can be used to store object records of the attachments
-      message.attachments.each do |attachment|
-        file = StringIO.new(attachment.decoded)
-        file.class.class_eval { attr_accessor :original_filename, :content_type }
-        file.original_filename = attachment.filename
-        file.content_type = attachment.mime_type
-        email["attachments"] << attachment   # adding all attachment objects one by one in the array
+    begin
+      the_message_html = (message.multipart? ? message.html_part.body.decoded : message.body.decoded)
+      the_message_text = (message.multipart? ? message.text_part.body.decoded : message.body.decoded)
+      @incoming_rfq = IncomingRfq.create(:from => message.from.first, :subject => message.subject, :html_body => the_message_html, :text_body => the_message_text)
+
+      if message.multipart?
+        message.attachments.each do |attachment|
+          file = StringIO.new(attachment.decoded)
+          file.class.class_eval { attr_accessor :original_filename, :content_type }
+          file.original_filename = attachment.filename
+          file.content_type = attachment.mime_type
+          if file.content_type == "text/plain" || file.content_type == "application/pdf"
+            incoming_rfq_attachment = IncomingRfqAttachment.new
+            incoming_rfq_attachment.attached_file = file
+            incoming_rfq_attachment.incoming_rfq_id = @incoming_rfq.id
+            incoming_rfq_attachment.save
+          end
+        end
       end
-    else
-      email["html"] = message.body.decoded    # in this case its a plain email so html body is same as text body
-      email["text"] = message.body.decoded
-      email["attachments"] = []   # no attachments
+
+    rescue Exception => e
+      Mailman.logger.error "Exception occurred while receiving message:\n#{message}"
+      Mailman.logger.error [e, *e.backtrace].join("\n")
     end
-    puts email
   end
 end
