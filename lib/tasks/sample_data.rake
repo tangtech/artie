@@ -7,19 +7,24 @@ namespace :db do
                          password_confirmation: "foobar")
     admin.toggle!(:admin)
 
-    User.create!(name: "Normal User",
-                 email: "example@railstutorial.org",
-                 password: "foobar",
-                 password_confirmation: "foobar")
+    Customer.create!(name: "PT Aker Solutions",
+                     short_name: "Aker",
+                     branch: "Batam",
+                     domain: "akersolutions.com")
 
-    9.times do |n|
-      name  = Faker::Name.name
-      email = "example-#{n+1}@railstutorial.org"
-      password  = "password"
-      User.create!(name: name,
-                   email: email,
-                   password: password,
-                   password_confirmation: password)
-    end
+    # User.create!(name: "Normal User",
+    #              email: "example@railstutorial.org",
+    #              password: "foobar",
+    #              password_confirmation: "foobar")
+
+    # 1.times do |n|
+    #  name  = Faker::Name.name
+    #  email = "example-#{n+1}@railstutorial.org"
+    #  password  = "password"
+    #  User.create!(name: name,
+    #               email: email,
+    #               password: password,
+    #               password_confirmation: password)
+    # end
   end
 end

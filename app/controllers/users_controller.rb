@@ -1,5 +1,6 @@
 class UsersController < ApplicationController
 
+  # Normal users are only allowed to change their password
   before_filter :correct_user, only: [:edit, :update]
   before_filter :admin_user, only: [:show, :new, :create, :index, :destroy]
 

@@ -15,16 +15,21 @@ Mailman.config.pop3 = {
 Mailman::Application.run do
   default do
     begin
+      # Extract info from email header & body
       the_message_html = (message.multipart? ? message.html_part.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8")  : message.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8"))
       the_message_text = (message.multipart? ? message.text_part.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8")  : message.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8"))
+      # Check if message.from.first matches a customer
+      # Else parse "From : ***@***.***" -> extract domain, confirm that matches customer
       @incoming_rfq = IncomingRfq.create(:from => message.from.first, :subject => message.subject, :html_body => the_message_html, :text_body => the_message_text)
 
+      # Handle attachments
       if message.multipart?
         message.attachments.each do |attachment|
           file = StringIO.new(attachment.decoded)
           file.class.class_eval { attr_accessor :original_filename, :content_type }
           file.original_filename = attachment.filename
           file.content_type = attachment.mime_type
+          # Our system can only handle TXT and PDF file formats for now
           if file.content_type == "text/plain" || file.content_type == "application/pdf"
             incoming_rfq_attachment = IncomingRfqAttachment.new
             incoming_rfq_attachment.attached_file = file

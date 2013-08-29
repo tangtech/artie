@@ -1,3 +1,6 @@
+# Proof of concept that we are able to parse customer BOMs
+# It will need to be called by the email retrieval script
+
 require "gtk2"
 require "poppler"
 
@@ -5,6 +8,7 @@ input_uri = "BB10.pdf"
 input_bom_text = ''
 input_drawing_text = ''
 
+# Define the various Regex patterns expected for an Aker BOM
 BOM_REGEX = /MATERIAL REPORT/i
 DWG_REGEX = /AkerSolutions/i
 PART_NUMBER_REGEX = /Material\s*:(.*)/
@@ -27,6 +31,7 @@ NDE_SPEC_REGEX2 = /PS-108.*/i
 part = {}
 drawing = {}
 
+# Split up multi-page PDF files
 doc = Poppler::Document.new(input_uri)
 if doc.n_pages == 1
   IO.popen("copy #{input_uri} pg_0001.pdf") {|f| $stderr.puts "#{f} 1-page PDF file"}
@@ -34,13 +39,14 @@ else
   IO.popen("pdftk #{input_uri} burst") {|f| $stderr.puts "#{f} Split PDF file"}
   File.delete("doc_data.txt")
 end
+
 doc.each do |page|
   this_page = page.index + 1
-  if BOM_REGEX.match(page.get_text)
+  if BOM_REGEX.match(page.get_text) # Use Poppler's built-in functions to extract PDF text and see if it's a BOM...
     input_bom_text.concat page.get_text
-  elsif DWG_REGEX.match(page.get_text)
+  elsif DWG_REGEX.match(page.get_text) # If it's a drawing with machine-readable PDF text...
     input_drawing_text.concat page.get_text
-  else
+  else # Or a flattened PDF file that needs to be converted to PNG and run through the OCR engine
     this_page = page.index + 1
     IO.popen("gswin64c -dSAFER -dNOPAUSE -dBATCH -q -r300 -sDEVICE=pnggray -sOutputFile=pg_000#{this_page}.png pg_000#{this_page}.pdf") {|f| $stderr.puts "#{f} 1st Pass: Convert to 300dpi PNG"}
     IO.popen("tesseract pg_000#{this_page}.png pg_000#{this_page}") {|f| $stderr.puts "#{f} 1st Pass: OCR"}
@@ -54,9 +60,10 @@ doc.each do |page|
     File.delete("pg_000#{this_page}.txt")
     drawing["ocr_warning"] = true
   end
-  File.delete("pg_000#{this_page}.pdf")
+  File.delete("pg_000#{this_page}.pdf") # Remove unwanted files created by the PDF split
 end
 
+# Use Regex matching to extract the relevant strings for an Aker BOM
 part["part_number"] = PART_NUMBER_REGEX.match(input_bom_text).to_s.split(":")[1].to_s.strip
 part["description"] = DESCRIPTION_REGEX.match(input_bom_text).to_s.split(":")[1].to_s.strip
 part["part_revision"] = PART_REVISION_REGEX.match(input_bom_text).to_s.split(":")[1].to_s.split(";")[0].to_s.strip
@@ -77,6 +84,7 @@ part["stamping_specification_psl"] = false
 this_process = nil
 processes = PROCESSES_REGEX.match(input_bom_text).to_s.split(/\r?\n/)
 
+# Slightly more complicated rules needed to extract the specified processes
 processes.each do |line|
   if CUSTOMER_SPEC_REGEX1.match(line) || CUSTOMER_SPEC_REGEX2.match(line)
     this_process = 'other'
@@ -107,13 +115,14 @@ processes.each do |line|
   end
 end
 
-# The following lines break the script if no BOM
+# Bug: The following lines break the script if no BOM
 part["stamping_type"] = part["stamping_specification_full"][0].split(" ")[1]
 part["stamping_information"] = part["stamping_specification_full"].join(" ").split(":")
 part["stamping_information"].shift
 part["stamping_information"] = part["stamping_information"].join(":").strip
 part["stamping_information"] = part["stamping_information"].gsub /PSL \d/, '\0 (MO/YR)' if part["stamping_specification_psl"]
 
+# Ensure that the drawing matches the BOM
 MATCH_DRAWING_REGEX = /#{part["drawing_number"]}.*/
 DRAWING_NUMBER_FORMAT_REGEX = /-\w{3}-/
 match_drawing_number = MATCH_DRAWING_REGEX.match(input_drawing_text).to_s
@@ -126,6 +135,7 @@ else
 end
 puts "ERROR: Drawing Mismatch" if part["drawing_number"]!=drawing["drawing_number"] || part["drawing_revision"]!=drawing["drawing_revision"]
 
+# Define the various Regex patterns expected for specified threads
 drawing["threads"] = []
 ACME_THREAD_REGEX = /\d*\s?\d+\/?\d*-\d+ (ACME|NA|STUB ACME|SA)-\d\w(-LH)?/i
 API_THREAD_REGEX = /\d*\s?-?\d+\/?\d* (API IF|API LP|API UPTBG|IF[^C]|NPT|EU)/i
@@ -140,11 +150,14 @@ input_drawing_text.to_s.split(/\r?\n/).each do |line|
 end
 drawing["threads"].uniq!
 
+# Check dimension units
 DIMENSION_INCHES_REGEX = /dimensions are in inches/i
 DIMENSION_MM_REGEX = /dimensions are in mm/i
 drawing["dimension_unit"] = "inches" if DIMENSION_INCHES_REGEX.match(input_drawing_text)
 drawing["dimension_unit"] = "mm" if DIMENSION_MM_REGEX.match(input_drawing_text)
 
+# Check weight
+# To be implemented: Use size and density to double-check if weight is reasonable
 WEIGHT_REGEX = /\d+\.?\d* (LBS|KG)/i
 drawing["weight"] = WEIGHT_REGEX.match(input_drawing_text).to_s
 

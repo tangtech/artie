@@ -1,7 +1,8 @@
 class IncomingRfqsController < ApplicationController
 
-    before_filter :admin_user
+  before_filter :admin_user
 
+  # View not implemented
   def edit
     @incoming_rfq = IncomingRfq.find(params[:id])
   end
@@ -20,6 +21,7 @@ class IncomingRfqsController < ApplicationController
     @incoming_rfq = IncomingRfq.find(params[:id])
   end
 
+  # View not implemented
   def new
     @incoming_rfq = IncomingRfq.new
   end

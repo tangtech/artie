@@ -1,6 +1,6 @@
 class CustomersController < ApplicationController
 
-    before_filter :admin_user
+  before_filter :admin_user
 
   def edit
     @customer = Customer.find(params[:id])
