@@ -18,9 +18,15 @@ Mailman::Application.run do
       # Extract info from email header & body
       the_message_html = (message.multipart? ? message.html_part.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8")  : message.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8"))
       the_message_text = (message.multipart? ? message.text_part.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8")  : message.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8"))
-      # Check if message.from.first matches a customer
-      # Else parse "From : ***@***.***" -> extract domain, confirm that matches customer
-      @incoming_rfq = IncomingRfq.create(:from => message.from.first, :subject => message.subject, :html_body => the_message_html, :text_body => the_message_text)
+
+      if Customer.where(:domain => message.from.first.split("@")[1]).count > 0 # Check if email sender is from a customer domain
+        the_message_sender = message.from.first # Customer.where(:domain => message.from.first.split("@")[1])[0]["domain"]
+      else
+        SENDER_EMAIL_REGEX = /From: \A[\w+\-.]+@[a-z\d\-.]+\.[a-z]+\z/i # Bug: What happens if it isn't the first match?
+        the_message_sender = SENDER_EMAIL_REGEX.match(the_message_text).to_s.split(" ")[1].to_s.strip
+      end
+
+      @incoming_rfq = IncomingRfq.create(:from => the_message_sender, :subject => message.subject, :html_body => the_message_html, :text_body => the_message_text)
 
       # Handle attachments
       if message.multipart?
