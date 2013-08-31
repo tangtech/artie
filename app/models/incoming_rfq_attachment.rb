@@ -15,9 +15,7 @@
 class IncomingRfqAttachment < ActiveRecord::Base
 
   attr_accessible :attached_file, :incoming_rfq_id
-
   has_attached_file :attached_file
-
   belongs_to :incoming_rfq
 
   validates :incoming_rfq_id, presence: true

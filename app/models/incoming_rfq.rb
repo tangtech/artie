@@ -15,6 +15,7 @@ class IncomingRfq < ActiveRecord::Base
 
   attr_accessible :from, :html_body, :subject, :text_body
   has_many :incoming_rfq_attachments, dependent: :destroy
+  has_many :incoming_rfq_items, dependent: :destroy
 
   before_save { |incoming_rfq| incoming_rfq.from = from.downcase }
 

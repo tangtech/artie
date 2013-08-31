@@ -1,6 +1,7 @@
 require "rubygems"
 require "bundler/setup"
 require "mailman"
+require "nokogiri"
 require "net/smtp"
 
 require File.dirname(__FILE__) + "/../config/environment"
@@ -38,6 +39,43 @@ Mailman::Application.run do
       # Only add to our database if a valid customer is identified
       if Customer.where(:domain => the_message_sender.split("@")[1]).count > 0
         @incoming_rfq = IncomingRfq.create(:from => the_message_sender, :subject => message.subject, :html_body => the_message_html, :text_body => the_message_text)
+
+        # Extract list of items from HTML table
+        doc = Nokogiri::HTML(the_message_html)
+        table = doc.at('table')
+        this_table = []
+        table.search('tr').each do |tr|
+          this_row = []
+          tr.search('td').each do |td|
+            this_row << td.text.strip
+          end
+          this_table << this_row
+        end
+
+        # Get indices for :part_number, :description, :quantity, :required_delivery_date
+        index_part_number = this_table[0].index("Material")
+        index_description = this_table[0].index("Short Text")
+        index_quantity = this_table[0].index("Qty")
+        index_required_delivery_date = this_table[0].index("Delivery")
+        this_table.shift
+        # Check if dates are formatted DD/MM/YYYY or MM/DD/YYYY
+        check_all_dates = []
+        this_table.each do |row|
+          check_all_dates << row[index_required_delivery_date]
+        end
+        check_valid_dates = check_all_dates.select { |date| Date.parse(date) rescue nil }
+        incoming_rfq_american_date = (check_all_dates.count != check_valid_dates.count ? true : nil)
+        # Add each row to our DB
+        this_table.each do |row|
+          incoming_rfq_item = IncomingRfqItem.new
+          incoming_rfq_item.part_number = row[index_part_number]
+          incoming_rfq_item.description = row[index_description]
+          incoming_rfq_item.quantity = row[index_quantity]
+          incoming_rfq_item.required_delivery_date = (incoming_rfq_american_date.nil? ? Date.strptime(row[index_required_delivery_date], "%d/%m/%Y") : Date.strptime(row[index_required_delivery_date], "%m/%d/%Y"))
+          incoming_rfq_item.incoming_rfq_id = @incoming_rfq.id
+          puts incoming_rfq_item.inspect
+          incoming_rfq_item.save
+        end
 
         # Handle attachments
         if message.multipart?
