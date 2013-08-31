@@ -1,5 +1,6 @@
 <li>
   <%= link_to incoming_rfq.subject, incoming_rfq %>
+  | <%= incoming_rfq.from %>
   | <%= incoming_rfq.incoming_rfq_attachments.count %> attachments
   <% if current_user.admin? %>
       | <%= link_to "delete", incoming_rfq, method: :delete,
