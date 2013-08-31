@@ -20,6 +20,7 @@ gem 'bootstrap-will_paginate', '0.0.9'
 gem 'gtk2',                    '2.0.2'
 gem 'poppler',                 '2.0.2'
 gem 'paperclip',               '3.5.1'
+gem 'nokogiri',                '1.6.0'
 gem 'mailman',                 '0.7.0',  require: false
 
 group :development do
