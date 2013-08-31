@@ -4,9 +4,9 @@ require 'nokogiri'
 
 doc = Nokogiri::HTML(open("sample1.html"))
 table = doc.at('table')
-this_table = Array.new
+this_table = []
 table.search('tr').each do |tr|
-  this_row = Array.new
+  this_row = []
   tr.search('td').each do |td|
     this_row << td.text.strip
   end

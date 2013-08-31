@@ -1,6 +1,7 @@
 require "rubygems"
 require "bundler/setup"
 require "mailman"
+require "net/smtp"
 
 require File.dirname(__FILE__) + "/../config/environment"
 Mailman.config.ignore_stdin = true
@@ -53,8 +54,22 @@ Mailman::Application.run do
               incoming_rfq_attachment.save
             end
           end
-
         end
+
+      # Else, send an error email if cannot upload
+      else
+        email_body = <<END_OF_MESSAGE
+From: New RFQ Uploader <new.rfq@tangtechnical.com>
+To: <#{message.from.first}>
+Subject: Error Uploading #{message.subject}
+Your Email #{message.subject} could not be uploaded.
+END_OF_MESSAGE
+
+        smtp = Net::SMTP.new 'smtp.gmail.com', 587
+        smtp.enable_starttls
+        smtp.start('gmail.com', GMAIL_USERNAME, GMAIL_PASSWORD, :login)
+        smtp.send_message email_body, 'new.rfq@tangtechnical.com', message.from.first
+        smtp.finish
       end
 
     rescue Exception => e
