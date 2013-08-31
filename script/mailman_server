@@ -11,46 +11,49 @@ Mailman.config.pop3 = {
     password: GMAIL_PASSWORD
 }
 
+SENDER_EMAIL_REGEX = /From:.*[\w+\-.]+@[a-z\d\-.]+\.[a-z]+/i
+
 Mailman::Application.run do
   default do
     begin
-      # Extract info from email header & body
+      # Extract email body & sender
       the_message_html = (message.multipart? ? message.html_part.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8")  : message.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8"))
       the_message_text = (message.multipart? ? message.text_part.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8")  : message.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8"))
+      the_message_sender = message.from.first
 
-      # If email is from a customer domain...
-      if Customer.where(:domain => message.from.first.split("@")[1]).count > 0
-        # Just grab the sender's address from the email header
-        the_message_sender = message.from.first
-      # Else if email sender does not match a customer domain...
-      else
-        SENDER_EMAIL_REGEX = /From:.*[\w+\-.]+@[a-z\d\-.]+\.[a-z]+/i
+      # If email sender does not match a customer domain...
+      if Customer.where(:domain => message.from.first.split("@")[1]).count == 0
         # Regex match who has forwarded it...
+        # Note: This Regex ONLY matches the formatting used in Gmail's 'Forward', not 'Reply'
         this_message_sender_matches = the_message_text.scan(SENDER_EMAIL_REGEX)
-        # And loop until we get a match
+        # And loop until (i) we get a match or (ii) run out of matches
         i = 0
-        while the_message_sender.nil? do
+        while the_message_sender == message.from.first && !this_message_sender_matches[i].nil? do
           the_message_sender = this_message_sender_matches[i].to_s.split("<")[1] if Customer.where(:domain => this_message_sender_matches[i].to_s.split("@")[1]).count > 0
           i += 1
         end
       end
 
-      @incoming_rfq = IncomingRfq.create(:from => the_message_sender, :subject => message.subject, :html_body => the_message_html, :text_body => the_message_text)
+      # Only add to our database if a valid customer is identified
+      if Customer.where(:domain => the_message_sender.split("@")[1]).count > 0
+        @incoming_rfq = IncomingRfq.create(:from => the_message_sender, :subject => message.subject, :html_body => the_message_html, :text_body => the_message_text)
 
-      # Handle attachments
-      if message.multipart?
-        message.attachments.each do |attachment|
-          file = StringIO.new(attachment.decoded)
-          file.class.class_eval { attr_accessor :original_filename, :content_type }
-          file.original_filename = attachment.filename
-          file.content_type = attachment.mime_type
-          # Our system can only handle TXT and PDF file formats for now
-          if file.content_type == "text/plain" || file.content_type == "application/pdf"
-            incoming_rfq_attachment = IncomingRfqAttachment.new
-            incoming_rfq_attachment.attached_file = file
-            incoming_rfq_attachment.incoming_rfq_id = @incoming_rfq.id
-            incoming_rfq_attachment.save
+        # Handle attachments
+        if message.multipart?
+          message.attachments.each do |attachment|
+            file = StringIO.new(attachment.decoded)
+            file.class.class_eval { attr_accessor :original_filename, :content_type }
+            file.original_filename = attachment.filename
+            file.content_type = attachment.mime_type
+            # Our system can only handle TXT and PDF file formats for now
+            if file.content_type == "text/plain" || file.content_type == "application/pdf"
+              incoming_rfq_attachment = IncomingRfqAttachment.new
+              incoming_rfq_attachment.attached_file = file
+              incoming_rfq_attachment.incoming_rfq_id = @incoming_rfq.id
+              incoming_rfq_attachment.save
+            end
           end
+
         end
       end
 
