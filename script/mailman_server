@@ -40,7 +40,26 @@ Mailman::Application.run do
       if Customer.where(:domain => the_message_sender.split("@")[1]).count > 0
         @incoming_rfq = IncomingRfq.create(:from => the_message_sender, :subject => message.subject, :html_body => the_message_html, :text_body => the_message_text)
 
-        # Extract list of items from HTML table
+        # Extract and save attachments
+        if message.multipart?
+          message.attachments.each do |attachment|
+            file = StringIO.new(attachment.decoded)
+            file.class.class_eval { attr_accessor :original_filename, :content_type }
+            file.original_filename = attachment.filename
+            file.content_type = attachment.mime_type
+            # Our system can only handle TXT and PDF file formats for now
+            if file.content_type == "text/plain" || file.content_type == "application/pdf"
+              incoming_rfq_attachment = IncomingRfqAttachment.new
+              incoming_rfq_attachment.attached_file = file
+              incoming_rfq_attachment.incoming_rfq_id = @incoming_rfq.id
+              incoming_rfq_attachment.save
+            end
+          end
+        end
+
+        # Extract list of items from HTML table in email
+        # This only works for the Aker Batam BO format
+        # KIV extract to another file and called dynamically after introducing functionality for other customer formats
         doc = Nokogiri::HTML(the_message_html)
         table = doc.at('table')
         this_table = []
@@ -58,40 +77,37 @@ Mailman::Application.run do
         index_quantity = this_table[0].index("Qty")
         index_required_delivery_date = this_table[0].index("Delivery")
         this_table.shift
-        # Check if dates are formatted DD/MM/YYYY or MM/DD/YYYY
-        check_all_dates = []
+
+        # Store :part_number, :required_delivery_date in arrays
+        get_all_dates = []
+        get_all_part_numbers = []
         this_table.each do |row|
-          check_all_dates << row[index_required_delivery_date]
-        end
-        check_valid_dates = check_all_dates.select { |date| Date.parse(date) rescue nil }
-        incoming_rfq_american_date = (check_all_dates.count != check_valid_dates.count ? true : nil)
-        # Add each row to our DB
-        this_table.each do |row|
-          incoming_rfq_item = IncomingRfqItem.new
-          incoming_rfq_item.part_number = row[index_part_number]
-          incoming_rfq_item.description = row[index_description]
-          incoming_rfq_item.quantity = row[index_quantity]
-          incoming_rfq_item.required_delivery_date = (incoming_rfq_american_date.nil? ? Date.strptime(row[index_required_delivery_date], "%d/%m/%Y") : Date.strptime(row[index_required_delivery_date], "%m/%d/%Y"))
-          incoming_rfq_item.incoming_rfq_id = @incoming_rfq.id
-          puts incoming_rfq_item.inspect
-          incoming_rfq_item.save
+          get_all_dates << row[index_required_delivery_date]
+          get_all_part_numbers << row[index_part_number]
         end
 
-        # Handle attachments
-        if message.multipart?
-          message.attachments.each do |attachment|
-            file = StringIO.new(attachment.decoded)
-            file.class.class_eval { attr_accessor :original_filename, :content_type }
-            file.original_filename = attachment.filename
-            file.content_type = attachment.mime_type
-            # Our system can only handle TXT and PDF file formats for now
-            if file.content_type == "text/plain" || file.content_type == "application/pdf"
-              incoming_rfq_attachment = IncomingRfqAttachment.new
-              incoming_rfq_attachment.attached_file = file
-              incoming_rfq_attachment.incoming_rfq_id = @incoming_rfq.id
-              incoming_rfq_attachment.save
+        # Check if :required_delivery_date is formatted DD/MM/YYYY or MM/DD/YYYY
+        get_valid_dates = get_all_dates.select { |date| Date.parse(date) rescue nil }
+        incoming_rfq_american_date = (get_all_dates.count != get_valid_dates.count ? true : nil)
+
+        # Get unique :part_number...
+        get_valid_part_numbers  = get_all_part_numbers.uniq
+        get_valid_part_numbers.each do |part_number|
+          incoming_rfq_item = IncomingRfqItem.new
+          incoming_rfq_item.incoming_rfq_id = @incoming_rfq.id
+          incoming_rfq_item.part_number = part_number
+          incoming_rfq_item.quantity = 0
+          this_table.each do |row|
+            # And match :description, :quantity, :required_delivery_date
+            if part_number == row[index_part_number]
+              incoming_rfq_item.quantity += row[index_quantity].to_i
+              incoming_rfq_item.description = row[index_description]
+              this_date = (incoming_rfq_american_date.nil? ? Date.strptime(row[index_required_delivery_date], "%d/%m/%Y") : Date.strptime(row[index_required_delivery_date], "%m/%d/%Y"))
+              incoming_rfq_item.required_delivery_date = this_date if incoming_rfq_item.required_delivery_date.nil? || incoming_rfq_item.required_delivery_date > this_date
             end
           end
+          puts incoming_rfq_item.inspect
+          incoming_rfq_item.save
         end
 
       # Else, send an error email if cannot upload
