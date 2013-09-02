@@ -38,7 +38,7 @@ Mailman::Application.run do
 
       # Only add to our database if a valid customer is identified
       if Customer.where(:domain => the_message_sender.split("@")[1]).count > 0
-        @incoming_rfq = IncomingRfq.create(:from => the_message_sender, :subject => message.subject, :html_body => the_message_html, :text_body => the_message_text)
+        @incoming_rfq = IncomingRfq.create(:from => message.from.first, :originator => the_message_sender, :subject => message.subject, :html_body => the_message_html, :text_body => the_message_text)
 
         # Extract and save attachments
         if message.multipart?
