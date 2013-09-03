@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20130903042805) do
+ActiveRecord::Schema.define(:version => 20130903095509) do
 
   create_table "customers", :force => true do |t|
     t.string   "name"
@@ -20,6 +20,29 @@ ActiveRecord::Schema.define(:version => 20130903042805) do
     t.datetime "updated_at", :null => false
     t.string   "domain"
     t.string   "branch"
+  end
+
+  create_table "drawings", :force => true do |t|
+    t.string   "customer_domain"
+    t.string   "drawing_number"
+    t.string   "drawing_revision"
+    t.string   "shape"
+    t.float    "round_outside_diameter"
+    t.float    "round_inside_diameter"
+    t.float    "round_length"
+    t.float    "flat_length"
+    t.float    "flat_width"
+    t.float    "flat_thickness"
+    t.string   "dimension_unit"
+    t.float    "weight"
+    t.string   "weight_unit"
+    t.text     "threads"
+    t.string   "attached_drawing_file_name"
+    t.string   "attached_drawing_content_type"
+    t.integer  "attached_drawing_file_size"
+    t.datetime "attached_drawing_updated_at"
+    t.datetime "created_at",                    :null => false
+    t.datetime "updated_at",                    :null => false
   end
 
   create_table "incoming_rfq_attachments", :force => true do |t|
@@ -50,6 +73,33 @@ ActiveRecord::Schema.define(:version => 20130903042805) do
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
     t.string   "originator"
+  end
+
+  create_table "parts", :force => true do |t|
+    t.string   "customer_domain"
+    t.string   "part_number"
+    t.string   "part_revision"
+    t.string   "part_ecn"
+    t.string   "drawing_number"
+    t.string   "drawing_revision"
+    t.string   "description"
+    t.string   "psl"
+    t.string   "material_temperature"
+    t.string   "material_class"
+    t.text     "material_specification_short"
+    t.text     "material_specification_full"
+    t.text     "process_specification_short"
+    t.text     "process_specification_full"
+    t.text     "stamping_specification_full"
+    t.boolean  "stamping_specification_psl"
+    t.string   "stamping_type"
+    t.string   "stamping_information"
+    t.string   "attached_bom_file_name"
+    t.string   "attached_bom_content_type"
+    t.integer  "attached_bom_file_size"
+    t.datetime "attached_bom_updated_at"
+    t.datetime "created_at",                   :null => false
+    t.datetime "updated_at",                   :null => false
   end
 
   create_table "users", :force => true do |t|
