@@ -1,6 +1,6 @@
 class IncomingRfqsController < ApplicationController
 
-  before_filter :admin_user
+  before_filter :internal_user
 
   # View not implemented
   def edit

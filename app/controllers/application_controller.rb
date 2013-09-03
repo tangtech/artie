@@ -29,4 +29,16 @@ class ApplicationController < ActionController::Base
     redirect_to(root_path) unless current_user.admin?
   end
 
+  def internal_user
+    redirect_to(root_path) unless current_user.internal_user?
+  end
+
+  def internal_user_part_approver
+    redirect_to(root_path) unless current_user.internal_user_part_approver?
+  end
+
+  def internal_user_rfq_approver
+    redirect_to(root_path) unless current_user.internal_user_rfq_approver?
+  end
+
 end
