@@ -10,6 +10,7 @@
 #  required_delivery_date :date
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
+#  customer_material      :boolean          default(FALSE)
 #
 
 class IncomingRfqItem < ActiveRecord::Base

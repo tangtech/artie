@@ -23,6 +23,8 @@
 #  attached_drawing_updated_at   :datetime
 #  created_at                    :datetime         not null
 #  updated_at                    :datetime         not null
+#  approved                      :boolean          default(FALSE)
+#  approver_user_id              :integer
 #
 
 class Drawing < ActiveRecord::Base
@@ -36,5 +38,6 @@ class Drawing < ActiveRecord::Base
   VALID_DOMAIN_REGEX = /[a-z\d\-.]+\.[a-z]+\z/i
   validates :customer_domain, presence: true, format: { with: VALID_DOMAIN_REGEX }
   validates :drawing_number, presence: true, length: { maximum: 100 }
+  validates_uniqueness_of :drawing_number, :scope => :drawing_revision
 
 end
