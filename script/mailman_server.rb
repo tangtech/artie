@@ -110,7 +110,7 @@ Mailman::Application.run do
           incoming_rfq_item.save
         end
 
-      # Else, send an error email if cannot upload
+        # Else, send an error email if cannot upload
       else
         email_body = <<END_OF_MESSAGE
 From: New RFQ Uploader <new.rfq@tangtechnical.com>
