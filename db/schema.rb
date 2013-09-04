@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20130903095509) do
+ActiveRecord::Schema.define(:version => 20130904033257) do
 
   create_table "customers", :force => true do |t|
     t.string   "name"
@@ -41,9 +41,13 @@ ActiveRecord::Schema.define(:version => 20130903095509) do
     t.string   "attached_drawing_content_type"
     t.integer  "attached_drawing_file_size"
     t.datetime "attached_drawing_updated_at"
-    t.datetime "created_at",                    :null => false
-    t.datetime "updated_at",                    :null => false
+    t.datetime "created_at",                                       :null => false
+    t.datetime "updated_at",                                       :null => false
+    t.boolean  "approved",                      :default => false
+    t.integer  "approver_user_id"
   end
+
+  add_index "drawings", ["drawing_number", "drawing_revision"], :name => "index_drawings_on_drawing_number_and_drawing_revision", :unique => true
 
   create_table "incoming_rfq_attachments", :force => true do |t|
     t.string   "attached_file_file_name"
@@ -98,9 +102,13 @@ ActiveRecord::Schema.define(:version => 20130903095509) do
     t.string   "attached_bom_content_type"
     t.integer  "attached_bom_file_size"
     t.datetime "attached_bom_updated_at"
-    t.datetime "created_at",                   :null => false
-    t.datetime "updated_at",                   :null => false
+    t.datetime "created_at",                                      :null => false
+    t.datetime "updated_at",                                      :null => false
+    t.boolean  "approved",                     :default => false
+    t.integer  "approver_user_id"
   end
+
+  add_index "parts", ["part_number", "part_revision"], :name => "index_parts_on_part_number_and_part_revision", :unique => true
 
   create_table "users", :force => true do |t|
     t.string   "name"
