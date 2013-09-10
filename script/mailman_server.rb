@@ -45,6 +45,7 @@ Mailman::Application.run do
       # Extract email body & sender
       the_message_html = (message.multipart? ? message.html_part.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8")  : message.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8"))
       the_message_text = (message.multipart? ? message.text_part.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8")  : message.body.decoded.force_encoding("ISO-8859-1").encode("UTF-8"))
+      the_message_subject = message.subject.gsub /Fwd: /, ''
       the_message_sender = message.from.first
 
       # If email sender does not match a customer domain...
@@ -62,7 +63,7 @@ Mailman::Application.run do
 
       # Only add to our database if a valid customer is identified
       if Customer.where(:domain => the_message_sender.split("@")[1]).count > 0
-        @incoming_rfq = IncomingRfq.create(:from => message.from.first, :originator => the_message_sender, :subject => message.subject, :html_body => the_message_html, :text_body => the_message_text)
+        @incoming_rfq = IncomingRfq.create(:from => message.from.first, :originator => the_message_sender, :subject => the_message_subject, :html_body => the_message_html, :text_body => the_message_text)
 
         # Extract and save attachments
         if message.multipart?
@@ -217,15 +218,15 @@ Mailman::Application.run do
 
                   this_part.stamping_type = this_part.stamping_specification_full[0].split(" ")[1]
                   this_part.stamping_information = this_part.stamping_specification_full.join(" ")
+                  this_part.stamping_information = this_part.stamping_information.gsub /PSL \d/, '\0 (MO/YR)' if this_part.stamping_specification_psl
                   this_part.stamping_information = this_part.stamping_information.split(":")
                   this_part.stamping_information.shift
                   this_part.stamping_information = this_part.stamping_information.join(":").strip
-                  this_part.stamping_information = this_part.stamping_information.gsub /PSL \d/, '\0 (MO/YR)' if this_part.stamping_specification_psl
-                  puts this_part.stamping_information.inspect
 
                   this_part.attached_bom = matched_attachment.attached_file
 
-                  # Stamping info for BBW82546S2​E37 gets truncated! No idea why.
+                  # puts this_part.stamping_information.inspect
+                  # Stamping info for BBW82546S2​E37 is ok on its own, but gets truncated in the array! No idea why.
                   puts this_part.inspect
                   this_part.save
                 else

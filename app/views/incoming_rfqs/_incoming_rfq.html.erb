@@ -1,5 +1,5 @@
 <li>
-  <%= link_to incoming_rfq.subject, incoming_rfq %>
+  QN<%= incoming_rfq.id %>: <%= link_to incoming_rfq.subject, incoming_rfq %>
   | Originator: <%= incoming_rfq.originator %>
   | Forwarder: <%= incoming_rfq.from %>
   | <%= pluralize(incoming_rfq.incoming_rfq_items.count, "item") %>

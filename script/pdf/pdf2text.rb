@@ -4,7 +4,7 @@
 require "gtk2"
 require "poppler"
 
-input_uri = "BB04.pdf"
+input_uri = "BB08.pdf"
 input_bom_text = ''
 input_drawing_text = ''
 
