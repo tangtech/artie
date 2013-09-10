@@ -1,7 +1,7 @@
 <li>
   <%= link_to incoming_rfq.subject, incoming_rfq %>
   | Originator: <%= incoming_rfq.originator %>
-  | Forwarded By: <%= incoming_rfq.from %>
+  | Forwarder: <%= incoming_rfq.from %>
   | <%= pluralize(incoming_rfq.incoming_rfq_items.count, "item") %>
   <% if current_user.admin? %>
       | <%= link_to "delete", incoming_rfq, method: :delete,

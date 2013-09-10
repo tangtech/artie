@@ -1,8 +1,11 @@
 require "rubygems"
+require "active_support"
 require "bundler/setup"
-require "mailman"
+require "gtk2"
+require "poppler"
 require "nokogiri"
 require "net/smtp"
+require "mailman"
 
 require File.dirname(__FILE__) + "/../config/environment"
 Mailman.config.ignore_stdin = true
@@ -14,6 +17,27 @@ Mailman.config.pop3 = {
 }
 
 SENDER_EMAIL_REGEX = /From:.*[\w+\-.]+@[a-z\d\-.]+\.[a-z]+/i
+
+# Define the various Regex patterns expected for an Aker BOM
+# Eventually, this part should be part of a dynamic include, depending on customer
+BOM_REGEX = /MATERIAL REPORT/i
+DWG_REGEX = /Aker/i
+PART_NUMBER_REGEX = /Material\s*:(.*)/
+DESCRIPTION_REGEX = /Description\s*:.*/
+PART_REVISION_REGEX = /Revision Level\s*:.*/
+DRAWING_REGEX = /Related Drawings\s*:.*/
+PSL_REGEX = /PSL\s*:.*/i
+TEMP_REGEX = /Temp\s*:.*/i
+MATERIAL_CLASS_REGEX = /Class\s*:.*/i
+PROCESSES_REGEX = /PROCESS SPECIFICATION\s*:.*/m
+CUSTOMER_SPEC_REGEX1 = /[A-Z]{1,2}-\d{3}.*/i
+CUSTOMER_SPEC_REGEX2 = /- - -.*/i
+MATERIAL_SPEC_REGEX1 = /MS-\d{3}.*/i
+MATERIAL_SPEC_REGEX2 = /.*MATERIAL REQUIREMENT.*/i
+MATERIAL_SPEC_REGEX3 = /.*ALTERNATE MATERIAL.*/i
+STAMPING_SPEC_REGEX = /PS-126.*/i
+NDE_SPEC_REGEX1 = /PS-107.*/i
+NDE_SPEC_REGEX2 = /PS-108.*/i
 
 Mailman::Application.run do
   default do
@@ -98,7 +122,7 @@ Mailman::Application.run do
           incoming_rfq_item.part_number = part_number
           incoming_rfq_item.quantity = 0
           this_table.each do |row|
-            # And match :description, :quantity, :required_delivery_date
+            # Match :description, :quantity, :required_delivery_date...
             if part_number == row[index_part_number]
               incoming_rfq_item.quantity += row[index_quantity].to_i
               incoming_rfq_item.description = row[index_description]
@@ -106,8 +130,108 @@ Mailman::Application.run do
               incoming_rfq_item.required_delivery_date = this_date if incoming_rfq_item.required_delivery_date.nil? || incoming_rfq_item.required_delivery_date > this_date
             end
           end
+          # And save it to our DB
           puts incoming_rfq_item.inspect
           incoming_rfq_item.save
+
+          # Search for matching attachments and extract text
+          match_attachments = IncomingRfqAttachment.where("attached_file_file_name LIKE (?)", "#{part_number}%")
+          match_attachments.each do |matched_attachment|
+            input_text = ''
+            if matched_attachment.attached_file_content_type == "text/plain"
+              input_text = File.read(matched_attachment.attached_file.path)
+            elsif matched_attachment.attached_file_content_type == "application/pdf"
+              doc = Poppler::Document.new(matched_attachment.attached_file.path)
+              doc.each do |page|
+                input_text.concat page.get_text if !page.get_text.strip.nil?
+              end
+              if input_text == ''
+                # Run OCR
+              end
+            end
+
+            # Test whether it is a BOM or DWG
+            if BOM_REGEX.match(input_text)
+              matched_part_number = PART_NUMBER_REGEX.match(input_text).to_s.split(":")[1].to_s.strip
+              matched_part_revision = PART_REVISION_REGEX.match(input_text).to_s.split(":")[1].to_s.split(";")[0].to_s.strip
+
+              # Verify that BOM matches :part_number & does not exist in DB
+              if part_number == matched_part_number
+                if Part.where(:part_number => matched_part_number, :part_revision => matched_part_revision).count == 0
+                  # Create new record
+                  this_part = Part.new
+                  this_part.customer_domain = the_message_sender.split("@")[1]
+                  this_part.part_number = matched_part_number
+                  this_part.part_revision = matched_part_revision
+                  this_part.attached_bom = matched_attachment.attached_file
+
+                  this_part.description = DESCRIPTION_REGEX.match(input_text).to_s.split(":")[1].to_s.strip
+                  this_part.part_ecn = PART_REVISION_REGEX.match(input_text).to_s.split(":")[1].to_s.split(";")[1].to_s.strip
+                  this_part.drawing_number = DRAWING_REGEX.match(input_text).to_s.split(":")[3].to_s.split(",")[0].to_s.strip
+                  this_part.drawing_revision = DRAWING_REGEX.match(input_text).to_s.split(":")[4].to_s.split(",")[0].to_s.strip
+                  this_part.psl = PSL_REGEX.match(input_text).to_s.split(":")[1].to_s.split(" ")[0].to_s.strip
+                  this_part.material_temperature = TEMP_REGEX.match(input_text).to_s.split(":")[1].to_s.split(" ")[0].to_s.strip
+                  this_part.material_class = MATERIAL_CLASS_REGEX.match(input_text).to_s.split(":")[1].to_s.strip
+
+                  this_part.material_specification_short = []
+                  this_part.material_specification_full = []
+                  this_part.process_specification_short = []
+                  this_part.process_specification_full = []
+                  this_part.stamping_specification_full = []
+                  this_part.stamping_specification_psl = false
+
+                  this_process = nil
+                  processes = PROCESSES_REGEX.match(input_text).to_s.split(/\r?\n/)
+
+                  # Extract the specified processes
+                  processes.each do |line|
+                    if CUSTOMER_SPEC_REGEX1.match(line) || CUSTOMER_SPEC_REGEX2.match(line)
+                      this_process = 'other'
+                      this_process = 'material' if MATERIAL_SPEC_REGEX1.match(line) || MATERIAL_SPEC_REGEX2.match(line) || MATERIAL_SPEC_REGEX3.match(line)
+                      this_process = 'stamping' if STAMPING_SPEC_REGEX.match(line)
+                      this_process = 'nde' if NDE_SPEC_REGEX1.match(line) || NDE_SPEC_REGEX2.match(line)
+                      this_line = (CUSTOMER_SPEC_REGEX1.match(line) ? CUSTOMER_SPEC_REGEX1.match(line).to_s.strip : CUSTOMER_SPEC_REGEX2.match(line).to_s.strip )
+                    else
+                      this_process = nil if this_process == 'other'
+                      this_line = line.to_s.strip
+                    end
+
+                    if this_process == 'material'
+                      this_part.material_specification_short << MATERIAL_SPEC_REGEX1.match(line).to_s.split(" ")[0]
+                      this_part.material_specification_full << this_line
+                    end
+                    if this_process == 'nde' || this_process == 'other'
+                      this_part.process_specification_short << CUSTOMER_SPEC_REGEX1.match(line).to_s.split(" ")[0]
+                      this_part.process_specification_full << this_line
+                    end
+                    if this_process == 'stamping'
+                      if /PS-126 STAMP DATE \(MO\/YR\)/i.match(line)
+                        this_process = nil
+                        this_part.stamping_specification_psl = true
+                      else
+                        this_part.stamping_specification_full << this_line
+                      end
+                    end
+                  end
+
+                  this_part.stamping_type = this_part.stamping_specification_full[0].split(" ")[1]
+                  this_part.stamping_information = this_part.stamping_specification_full.join(" ").split(":")
+                  this_part.stamping_information.shift
+                  this_part.stamping_information = this_part.stamping_information.join(":").strip
+                  this_part.stamping_information = this_part.stamping_information.gsub /PSL \d/, '\0 (MO/YR)' if this_part.stamping_specification_psl
+
+                  puts this_part.inspect
+                  this_part.save
+                else
+                  puts "This Part Number has already been created"
+                end
+              else
+                puts "BOM does not match Part Number"
+              end
+            elsif DWG_REGEX.match(input_text)
+              # To be implemented
+            end
+          end
         end
 
         # Else, send an error email if cannot upload
