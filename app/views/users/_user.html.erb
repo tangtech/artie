@@ -1,6 +1,18 @@
 <li>
   <%= link_to user.name, user %>
   | <%= user.email %>
+  <% if user.admin? %>
+      | System Administrator
+  <% end %>
+  <% if user.internal_user_rfq_approver? %>
+      | Approves RFQs
+  <% end %>
+  <% if user.internal_user_part_approver? %>
+      | Approves Parts
+  <% end %>
+  <% if user.internal_user? && !user.internal_user_rfq_approver? && !user.internal_user_part_approver? %>
+      | Staff
+  <% end %>
   <% if current_user.admin? && !current_user?(user) %>
       | <%= link_to "delete", user, method: :delete,
                     data: { confirm: "Are you sure you want to delete this?" } %>

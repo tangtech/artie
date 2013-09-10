@@ -17,6 +17,36 @@ namespace :db do
     sales_manager.toggle!(:internal_user_part_approver)
     sales_manager.toggle!(:internal_user_rfq_approver)
 
+    internal_user = User.create!(name: "Azizur Rahman",
+                                 email: "azizur.rahman@tangtechnical.com",
+                                 password: "tangtech",
+                                 password_confirmation: "tangtech")
+    internal_user.toggle!(:internal_user)
+
+    internal_user = User.create!(name: "Godwin Ong",
+                                 email: "godwin.ong@tangtechnical.com",
+                                 password: "tangtech",
+                                 password_confirmation: "tangtech")
+    internal_user.toggle!(:internal_user)
+
+    internal_user = User.create!(name: "May Wong",
+                                 email: "may.wong@tangtechnical.com",
+                                 password: "tangtech",
+                                 password_confirmation: "tangtech")
+    internal_user.toggle!(:internal_user)
+
+    internal_user = User.create!(name: "Nel Camungay",
+                                 email: "nel.camungay@tangtechnical.com",
+                                 password: "tangtech",
+                                 password_confirmation: "tangtech")
+    internal_user.toggle!(:internal_user)
+
+    internal_user = User.create!(name: "Wendy Yau",
+                                 email: "wendy.yau@tangtechnical.com",
+                                 password: "tangtech",
+                                 password_confirmation: "tangtech")
+    internal_user.toggle!(:internal_user)
+
     Customer.create!(name: "PT Aker Solutions",
                      short_name: "Aker",
                      branch: "Batam",
