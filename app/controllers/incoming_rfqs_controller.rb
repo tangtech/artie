@@ -19,6 +19,7 @@ class IncomingRfqsController < ApplicationController
 
   def show
     @incoming_rfq = IncomingRfq.find(params[:id])
+    @incoming_rfq_items = @incoming_rfq.incoming_rfq_items.all
   end
 
   # View not implemented

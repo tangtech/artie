@@ -1,13 +1,10 @@
 <li>
   <%= link_to incoming_rfq.subject, incoming_rfq %>
-  | <%= incoming_rfq.from %>
-  | <%= incoming_rfq.originator %>
-  | <%= incoming_rfq.incoming_rfq_attachments.count %> attachments
+  | Originator: <%= incoming_rfq.originator %>
+  | Forwarded By: <%= incoming_rfq.from %>
+  | <%= pluralize(incoming_rfq.incoming_rfq_items.count, "item") %>
   <% if current_user.admin? %>
       | <%= link_to "delete", incoming_rfq, method: :delete,
                     data: { confirm: "Are you sure you want to delete this?" } %>
   <% end %>
-  <br /><br />
-  <%= incoming_rfq.incoming_rfq_items.all %>
-  <br />
 </li>

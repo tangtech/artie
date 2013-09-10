@@ -1,0 +1,26 @@
+<% provide(:title, @incoming_rfq.subject) %>
+<h1>
+  <%= @incoming_rfq.subject %>
+</h1>
+<div class="row">
+  <aside class="span4">
+    <section>
+      Originator: <%= @incoming_rfq.originator %>
+      <br />
+      Forwarded By: <%= @incoming_rfq.from %>
+    </section>
+  </aside>
+  <div class="incoming_rfqs">
+    <table>
+      <thead>
+      <td>Part No.</td>
+      <td>Description</td>
+      <td>Quantity</td>
+      <td>Required Delivery</td>
+      </thead>
+      <%= render @incoming_rfq_items %>
+    </table>
+  </div>
+</div>
+<br />
+<div align=center><%= link_to "Back to Incoming RFQs", incoming_rfqs_path %></div>

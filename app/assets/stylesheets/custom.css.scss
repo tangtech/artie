@@ -212,5 +212,16 @@ input {
       border-bottom: 1px solid $grayLighter;
     }
   }
+  table {
+    thead {
+      font-weight: bold;
+      text-align: center;
+    }
+    td {
+      border: 1px solid;
+      padding: 3px;
+      text-align: center;
+    }
+  }
 }
 
