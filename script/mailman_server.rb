@@ -30,7 +30,7 @@ PSL_REGEX = /PSL\s*:.*/i
 TEMP_REGEX = /Temp\s*:.*/i
 MATERIAL_CLASS_REGEX = /Class\s*:.*/i
 PROCESSES_REGEX = /PROCESS SPECIFICATION\s*:.*/m
-CUSTOMER_SPEC_REGEX1 = /[A-Z]{1,2}-\d{3}.*/i
+CUSTOMER_SPEC_REGEX1 = /(C|HT|PS|QS|WS)-\d{3}.*/i
 CUSTOMER_SPEC_REGEX2 = /- - -.*/i
 MATERIAL_SPEC_REGEX1 = /MS-\d{3}.*/i
 MATERIAL_SPEC_REGEX2 = /.*MATERIAL REQUIREMENT.*/i
@@ -163,7 +163,6 @@ Mailman::Application.run do
                   this_part.customer_domain = the_message_sender.split("@")[1]
                   this_part.part_number = matched_part_number
                   this_part.part_revision = matched_part_revision
-                  this_part.attached_bom = matched_attachment.attached_file
 
                   this_part.description = DESCRIPTION_REGEX.match(input_text).to_s.split(":")[1].to_s.strip
                   this_part.part_ecn = PART_REVISION_REGEX.match(input_text).to_s.split(":")[1].to_s.split(";")[1].to_s.strip
@@ -196,30 +195,37 @@ Mailman::Application.run do
                       this_line = line.to_s.strip
                     end
 
-                    if this_process == 'material'
-                      this_part.material_specification_short << MATERIAL_SPEC_REGEX1.match(line).to_s.split(" ")[0]
-                      this_part.material_specification_full << this_line
-                    end
-                    if this_process == 'nde' || this_process == 'other'
-                      this_part.process_specification_short << CUSTOMER_SPEC_REGEX1.match(line).to_s.split(" ")[0]
-                      this_part.process_specification_full << this_line
-                    end
-                    if this_process == 'stamping'
-                      if /PS-126 STAMP DATE \(MO\/YR\)/i.match(line)
-                        this_process = nil
-                        this_part.stamping_specification_psl = true
-                      else
-                        this_part.stamping_specification_full << this_line
+                    unless BOM_REGEX.match(line)
+                      if this_process == 'material'
+                        this_part.material_specification_short << MATERIAL_SPEC_REGEX1.match(line).to_s.split(" ")[0]
+                        this_part.material_specification_full << this_line
+                      end
+                      if this_process == 'nde' || this_process == 'other'
+                        this_part.process_specification_short << CUSTOMER_SPEC_REGEX1.match(line).to_s.split(" ")[0]
+                        this_part.process_specification_full << this_line
+                      end
+                      if this_process == 'stamping'
+                        if /PS-126 STAMP DATE \(MO/i.match(line)
+                          this_process = nil
+                          this_part.stamping_specification_psl = true
+                        else
+                          this_part.stamping_specification_full << this_line
+                        end
                       end
                     end
                   end
 
                   this_part.stamping_type = this_part.stamping_specification_full[0].split(" ")[1]
-                  this_part.stamping_information = this_part.stamping_specification_full.join(" ").split(":")
+                  this_part.stamping_information = this_part.stamping_specification_full.join(" ")
+                  this_part.stamping_information = this_part.stamping_information.split(":")
                   this_part.stamping_information.shift
                   this_part.stamping_information = this_part.stamping_information.join(":").strip
                   this_part.stamping_information = this_part.stamping_information.gsub /PSL \d/, '\0 (MO/YR)' if this_part.stamping_specification_psl
+                  puts this_part.stamping_information.inspect
 
+                  this_part.attached_bom = matched_attachment.attached_file
+
+                  # Stamping info for BBW82546S2​E37 gets truncated! No idea why.
                   puts this_part.inspect
                   this_part.save
                 else

@@ -4,7 +4,7 @@
 require "gtk2"
 require "poppler"
 
-input_uri = "BB10.pdf"
+input_uri = "BB04.pdf"
 input_bom_text = ''
 input_drawing_text = ''
 
@@ -19,7 +19,7 @@ PSL_REGEX = /PSL\s*:.*/i
 TEMP_REGEX = /Temp\s*:.*/i
 MATERIAL_CLASS_REGEX = /Class\s*:.*/i
 PROCESSES_REGEX = /PROCESS SPECIFICATION\s*:.*/m
-CUSTOMER_SPEC_REGEX1 = /[A-Z]{1,2}-\d{3}.*/i
+CUSTOMER_SPEC_REGEX1 = /(C|HT|PS|QS|WS)-\d{3}.*/i
 CUSTOMER_SPEC_REGEX2 = /- - -.*/i
 MATERIAL_SPEC_REGEX1 = /MS-\d{3}.*/i
 MATERIAL_SPEC_REGEX2 = /.*MATERIAL REQUIREMENT.*/i
@@ -106,7 +106,7 @@ processes.each do |line|
     part["process_specification_full"] << this_line
   end
   if this_process == 'stamping'
-    if /PS-126 STAMP DATE \(MO\/YR\)/i.match(line)
+    if /PS-126 STAMP DATE \(MO/i.match(line)
       this_process = nil
       part["stamping_specification_psl"] = true
     else

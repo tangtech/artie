@@ -18,7 +18,7 @@ class CreateParts < ActiveRecord::Migration
       t.text :stamping_specification_full
       t.boolean :stamping_specification_psl
       t.string :stamping_type
-      t.string :stamping_information
+      t.text :stamping_information
       t.attachment :attached_bom
 
       t.timestamps

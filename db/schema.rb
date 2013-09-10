@@ -98,7 +98,7 @@ ActiveRecord::Schema.define(:version => 20130904040445) do
     t.text     "stamping_specification_full"
     t.boolean  "stamping_specification_psl"
     t.string   "stamping_type"
-    t.string   "stamping_information"
+    t.text     "stamping_information"
     t.string   "attached_bom_file_name"
     t.string   "attached_bom_content_type"
     t.integer  "attached_bom_file_size"

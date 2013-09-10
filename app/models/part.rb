@@ -20,7 +20,7 @@
 #  stamping_specification_full  :text
 #  stamping_specification_psl   :boolean
 #  stamping_type                :string(255)
-#  stamping_information         :string(255)
+#  stamping_information         :text
 #  attached_bom_file_name       :string(255)
 #  attached_bom_content_type    :string(255)
 #  attached_bom_file_size       :integer
@@ -40,6 +40,7 @@ class Part < ActiveRecord::Base
   serialize :process_specification_short
   serialize :process_specification_full
   serialize :stamping_specification_full
+  serialize :stamping_information
 
   before_save { |part| part.customer_domain = customer_domain.downcase }
 
