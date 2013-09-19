@@ -217,18 +217,21 @@ Mailman::Application.run do
                   end
 
                   this_part.stamping_type = this_part.stamping_specification_full[0].split(" ")[1]
-                  this_part.stamping_information = this_part.stamping_specification_full.join(" ")
-                  this_part.stamping_information = this_part.stamping_information.gsub /PSL \d/, '\0 (MO/YR)' if this_part.stamping_specification_psl
-                  this_part.stamping_information = this_part.stamping_information.split(":")
-                  this_part.stamping_information.shift
-                  this_part.stamping_information = this_part.stamping_information.join(":").strip
 
                   this_part.attached_bom = matched_attachment.attached_file
 
-                  # puts this_part.stamping_information.inspect
-                  # Stamping info for BBW82546S2​E37 is ok on its own, but gets truncated in the array! No idea why.
                   puts this_part.inspect
                   this_part.save
+
+                  # Commented out for now. To include at the user verification stage
+                  # Stamping info for BBW82546S2​E37 is ok on its own, but gets truncated in the array! No idea why.
+                  # this_part.stamping_information = this_part.stamping_specification_full.join(" ")
+                  # this_part.stamping_information = this_part.stamping_information.gsub /PSL \d/, '\0 (MO/YR)' if this_part.stamping_specification_psl
+                  # this_part.stamping_information = this_part.stamping_information.split(":")
+                  # this_part.stamping_information.shift
+                  # this_part.stamping_information = this_part.stamping_information.join(":").strip
+                  # puts this_part.stamping_information.inspect
+
                 else
                   puts "This Part Number has already been created"
                 end
