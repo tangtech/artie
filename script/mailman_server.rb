@@ -39,6 +39,18 @@ STAMPING_SPEC_REGEX = /PS-126.*/i
 NDE_SPEC_REGEX1 = /PS-107.*/i
 NDE_SPEC_REGEX2 = /PS-108.*/i
 
+# Define the various Regex patterns expected for an Aker Drawing
+# Eventually, this part should be part of a dynamic include, depending on customer
+MATCH_DRAWING_REGEX = /\d{11}.*/
+DRAWING_NUMBER_FORMAT_REGEX = /-\w{3}-/
+ACME_THREAD_REGEX = /\d*\s?\d+\/?\d*-\d+ (ACME|NA|STUB ACME|SA)-\d\w(-LH)?/i
+API_THREAD_REGEX = /\d*\s?-?\d+\/?\d* (API IF|API LP|API UPTBG|IF[^C]|NPT|EU)/i
+SHARPVEE_THREAD_REGEX = /SHARP VEE THD/i
+UN_THREAD_REGEX = /\d*\s?\d+\/?\d*-\d+ (UN|UNC|UNF|UNS)-\d\w/i
+DIMENSION_INCHES_REGEX = /dimensions are in inches/i
+DIMENSION_MM_REGEX = /dimensions are in mm/i
+WEIGHT_REGEX = /\d+\.?\d* (LBS|KG)/i
+
 Mailman::Application.run do
   default do
     begin
@@ -147,7 +159,34 @@ Mailman::Application.run do
                 input_text.concat page.get_text if !page.get_text.strip.nil?
               end
               if input_text == ''
-                # Run OCR
+                basepath = matched_attachment.attached_file.path
+                basepath = basepath.split("/")
+                filepath = basepath.join("\\")
+                basepath.pop
+                basepath = basepath.join("\\")
+
+                # Split multi-page PDF files
+                if doc.n_pages == 1
+                  IO.popen("copy #{filepath} #{basepath}\\pg_1.pdf") {|f| $stderr.puts "#{f} 1-page PDF file"}
+                else
+                  IO.popen("pdftk #{filepath} burst output #{basepath}\\pg_%1d") {|f| $stderr.puts "#{f} Split PDF file"}
+                  File.delete("#{basepath}\\doc_data.txt")
+                end
+                # Run through OCR engine
+                doc.each do |page|
+                  this_page = page.index + 1
+                  direction = ["North", "South", "East", "West"]
+                  direction.each do |direction|
+                    IO.popen("pdftk #{basepath}\\pg_#{this_page}.pdf cat 1-end#{direction} output #{basepath}\\pg_#{this_page}#{direction}.pdf") {|f| $stderr.puts "#{f} Rotate #{direction}"}
+                    IO.popen("gswin64c -dSAFER -dNOPAUSE -dBATCH -q -r300 -sDEVICE=pnggray -sOutputFile=#{basepath}\\pg_#{this_page}#{direction}.png #{basepath}\\pg_#{this_page}#{direction}.pdf") {|f| $stderr.puts "#{f} Orientation #{direction}: Convert to 300dpi PNG"}
+                    IO.popen("tesseract #{basepath}\\pg_#{this_page}#{direction}.png #{basepath}\\pg_#{this_page}#{direction}") {|f| $stderr.puts "#{f} Orientation #{direction}: OCR"}
+                    input_text.concat File.read("#{basepath}\\pg_#{this_page}#{direction}.txt")
+                    File.delete("#{basepath}\\pg_#{this_page}#{direction}.png")
+                    File.delete("#{basepath}\\pg_#{this_page}#{direction}.txt")
+                    File.delete("#{basepath}\\pg_#{this_page}#{direction}.pdf")
+                  end
+                  File.delete("#{basepath}\\pg_#{this_page}.pdf") # Remove unwanted files created by the PDF split
+                end
               end
             end
 
@@ -239,7 +278,40 @@ Mailman::Application.run do
                 puts "BOM does not match Part Number"
               end
             elsif DWG_REGEX.match(input_text)
-              # To be implemented
+
+              drawing_number = MATCH_DRAWING_REGEX.match(input_text).to_s
+              matched_drawing_number = (DRAWING_NUMBER_FORMAT_REGEX.match(drawing_number) ? drawing_number.to_s.split("-")[0].to_s.strip : drawing_number.to_s.split(" ")[0].to_s.strip)
+              matched_drawing_revision = (DRAWING_NUMBER_FORMAT_REGEX.match(drawing_number) ? drawing_number.to_s.split(" ")[0].to_s.split("-")[3].to_s.strip : drawing_number.to_s.split(" ")[1].to_s.strip)
+
+              # Verify that Drawing does not exist in DB
+              if Drawing.where(:drawing_number => matched_drawing_number, :drawing_revision => matched_drawing_revision).count == 0
+                this_drawing = Drawing.new
+                this_drawing.drawing_number = matched_drawing_number
+                this_drawing.drawing_revision = matched_drawing_revision
+
+                this_drawing.threads = []
+                input_text.to_s.split(/\r?\n/).each do |line|
+                  this_drawing.threads << ACME_THREAD_REGEX.match(line).to_s.strip if ACME_THREAD_REGEX.match(line)
+                  this_drawing.threads << API_THREAD_REGEX.match(line).to_s.strip if API_THREAD_REGEX.match(line)
+                  this_drawing.threads << SHARPVEE_THREAD_REGEX.match(line).to_s.strip if SHARPVEE_THREAD_REGEX.match(line)
+                  this_drawing.threads << UN_THREAD_REGEX.match(line).to_s.strip if UN_THREAD_REGEX.match(line)
+                end
+                this_drawing.threads.uniq!
+
+                this_drawing.dimension_unit = "inches" if DIMENSION_INCHES_REGEX.match(input_text)
+                this_drawing.dimension_unit = "mm" if DIMENSION_MM_REGEX.match(input_text)
+
+                # To be implemented: Use size and density to double-check if weight is reasonable
+                this_drawing.weight = WEIGHT_REGEX.match(input_text).to_s.split(" ")[0].to_s.strip
+                this_drawing.weight_unit = WEIGHT_REGEX.match(input_text).to_s.split(" ")[1].to_s.strip
+
+                this_drawing.customer_domain = the_message_sender.split("@")[1]
+                this_drawing.attached_drawing = matched_attachment.attached_file
+
+                puts this_drawing.inspect
+                this_drawing.save
+
+              end
             end
           end
         end
