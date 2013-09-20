@@ -1,0 +1,9 @@
+<% full_part_number = "#{part.part_number} Rev #{part.part_revision}" %>
+<li>
+  <%= link_to full_part_number, part %>
+  | <%= part.description %>
+  <% if current_user.admin? %>
+      | <%= link_to "delete", part, method: :delete,
+                    data: { confirm: "Are you sure you want to delete this?" } %>
+  <% end %>
+</li>

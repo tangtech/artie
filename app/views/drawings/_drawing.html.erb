@@ -1,0 +1,8 @@
+<% full_drawing_number = "#{drawing.drawing_number} Rev #{drawing.drawing_revision}" %>
+<li>
+  <%= link_to full_drawing_number, drawing %>
+  <% if current_user.admin? %>
+      | <%= link_to "delete", drawing, method: :delete,
+                    data: { confirm: "Are you sure you want to delete this?" } %>
+  <% end %>
+</li>

@@ -1,0 +1,48 @@
+<% provide(:title, @part.part_number) %>
+<% @drawing = Drawing.where(:drawing_number=> @part.drawing_number, :drawing_revision => @part.drawing_revision).find(params[:id]) %>
+<%
+   flash.now[:error] = ''
+   flash.now[:error] << "Part not vetted! " unless @part.approved
+   flash.now[:error] << "Drawing not vetted! " unless @drawing.approved
+%>
+<h1>
+  <%= @part.part_number %> Rev <%= @part.part_revision %>
+</h1>
+<div class="row">
+  <aside class="span4">
+    <section class="parts">
+      <table>
+        <tr>
+          <td><b>Customer</b></td>
+          <td><%= @part.customer_domain %></td>
+        </tr>
+        <tr>
+          <td><b>Description</b></td>
+          <td><%= @part.description %></td>
+        </tr>
+        <tr>
+          <td><b>Material</b></td>
+          <td><%= @part.material_specification_short.join(", ") %></td>
+        </tr>
+        <tr>
+          <td><b>Stamping</b></td>
+          <td><%= @part.stamping_specification_full.join(" ") %></td>
+        </tr>
+        <tr>
+          <td><b>Processes</b></td>
+          <td><%= @part.process_specification_short.join(", ") %></td>
+        </tr>
+        <tr>
+          <td><b>Weight</b></td>
+          <td><%= @drawing.weight %> <%= @drawing.weight_unit %></td>
+        </tr>
+        <tr>
+          <td><b>Attachments</b></td>
+          <td><%= link_to "View BOM", @part.attached_bom.url %><br /><%= link_to "View Drawing", @drawing.attached_drawing.url %></td>
+        </tr>
+      </table>
+    </section>
+  </aside>
+</div>
+<br />
+<div align=center><%= link_to "Back to Parts", parts_path %></div>

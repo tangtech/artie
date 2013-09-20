@@ -1,0 +1,22 @@
+<% provide(:title, @drawing.drawing_number) %>
+<h1>
+  <%= @drawing.drawing_number %> Ver <%= @drawing.drawing_revision %>
+</h1>
+<div class="row">
+  <aside class="span4">
+    <section class="drawings">
+      <table>
+        <tr>
+          <td><b>Customer</b></td>
+          <td><%= @drawing.customer_domain %></td>
+        </tr>
+        <tr>
+          <td><b>Attachment</b></td>
+          <td><%= link_to "View Original Drawing", @drawing.attached_drawing.url %></td>
+        </tr>
+      </table>
+    </section>
+  </aside>
+</div>
+<br />
+<div align=center><%= link_to "Back to Drawings", drawings_path %></div>

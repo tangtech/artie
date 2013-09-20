@@ -3,9 +3,10 @@ Artie::Application.routes.draw do
   resources :sessions, only: [:new, :create, :destroy]
   resources :customers
   resources :incoming_rfqs
+  resources :parts
+  resources :drawings
 
   root to: 'static_pages#home'
-  match '/rfq', to: 'static_pages#rfq'
   match '/createcustomer',  to: 'customers#new'
   match '/createuser',  to: 'users#new'
   match '/signin',  to: 'sessions#new'

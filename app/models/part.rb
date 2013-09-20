@@ -49,4 +49,6 @@ class Part < ActiveRecord::Base
   validates :part_number, presence: true, length: { maximum: 100 }
   validates_uniqueness_of :part_number, :scope => :part_revision
 
+  default_scope order: 'parts.created_at DESC'
+
 end
