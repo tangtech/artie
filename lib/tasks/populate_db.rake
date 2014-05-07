@@ -17,8 +17,8 @@ namespace :db do
     sales_manager.toggle!(:internal_user_part_approver)
     sales_manager.toggle!(:internal_user_rfq_approver)
 
-    internal_user = User.create!(name: "Azizur Rahman",
-                                 email: "azizur.rahman@tangtechnical.com",
+    internal_user = User.create!(name: "Ben Xin",
+                                 email: "ben.xin@tangtechnical.com",
                                  password: "tangtech",
                                  password_confirmation: "tangtech")
     internal_user.toggle!(:internal_user)
