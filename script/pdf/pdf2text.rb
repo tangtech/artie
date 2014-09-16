@@ -4,13 +4,13 @@
 require "gtk2"
 require "poppler"
 
-input_uri = "BB08.pdf"
+input_uri = "BB14.pdf"
 input_bom_text = ''
 input_drawing_text = ''
 
 # Define the various Regex patterns expected for an Aker BOM
 BOM_REGEX = /MATERIAL REPORT/i
-DWG_REGEX = /AkerSolutions/i
+DWG_REGEX = /(Aker|Kvaerner)/i
 PART_NUMBER_REGEX = /Material\s*:(.*)/
 DESCRIPTION_REGEX = /Description\s*:.*/
 PART_REVISION_REGEX = /Revision Level\s*:.*/
@@ -19,9 +19,9 @@ PSL_REGEX = /PSL\s*:.*/i
 TEMP_REGEX = /Temp\s*:.*/i
 MATERIAL_CLASS_REGEX = /Class\s*:.*/i
 PROCESSES_REGEX = /PROCESS SPECIFICATION\s*:.*/m
-CUSTOMER_SPEC_REGEX1 = /(C|HT|PS|QS|WS)-\d{3}.*/i
+CUSTOMER_SPEC_REGEX1 = /(C|CS|HT|PS|QS|WS)-\d{3}.*/i
 CUSTOMER_SPEC_REGEX2 = /- - -.*/i
-MATERIAL_SPEC_REGEX1 = /MS-\d{3}.*/i
+MATERIAL_SPEC_REGEX1 = /MS-\d{3|4}.*/i
 MATERIAL_SPEC_REGEX2 = /.*MATERIAL REQUIREMENT.*/i
 MATERIAL_SPEC_REGEX3 = /.*ALTERNATE MATERIAL.*/i
 STAMPING_SPEC_REGEX = /PS-126.*/i

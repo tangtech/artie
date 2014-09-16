@@ -21,7 +21,7 @@ SENDER_EMAIL_REGEX = /From:.*[\w+\-.]+@[a-z\d\-.]+\.[a-z]+/i
 # Define the various Regex patterns expected for an Aker BOM
 # Eventually, this part should be part of a dynamic include, depending on customer
 BOM_REGEX = /MATERIAL REPORT/i
-DWG_REGEX = /Aker/i
+DWG_REGEX = /(Aker|Kvaerner)/i
 PART_NUMBER_REGEX = /Material\s*:(.*)/
 DESCRIPTION_REGEX = /Description\s*:.*/
 PART_REVISION_REGEX = /Revision Level\s*:.*/
@@ -30,9 +30,9 @@ PSL_REGEX = /PSL\s*:.*/i
 TEMP_REGEX = /Temp\s*:.*/i
 MATERIAL_CLASS_REGEX = /Class\s*:.*/i
 PROCESSES_REGEX = /PROCESS SPECIFICATION\s*:.*/m
-CUSTOMER_SPEC_REGEX1 = /(C|HT|MS|PS|QS|WS)-\d{3}( |-).*/i
+CUSTOMER_SPEC_REGEX1 = /(C|CS|HT|MS|PS|QS|WS)-\d{3}( |-).*/i
 CUSTOMER_SPEC_REGEX2 = /- - -.*/i
-MATERIAL_SPEC_REGEX1 = /MS-\d{3}( |-).*/i
+MATERIAL_SPEC_REGEX1 = /MS-\d{3|4}( |-).*/i
 MATERIAL_SPEC_REGEX2 = /.*MATERIAL REQUIREMENT.*/i
 MATERIAL_SPEC_REGEX3 = /.*ALTERNATE MATERIAL.*/i
 STAMPING_SPEC_REGEX = /PS-126.*/i
@@ -112,14 +112,14 @@ Mailman::Application.run do
         index_part_number = this_table[0].index("Material")
         index_description = this_table[0].index("Short Text")
         index_quantity = this_table[0].index("Qty")
-        index_required_delivery_date = this_table[0].index("Delivery")
+        index_required_delivery_date = this_table[0].index("Deliv.date")
         this_table.shift
 
         # Store :part_number, :required_delivery_date in arrays
         get_all_dates = []
         get_all_part_numbers = []
         this_table.each do |row|
-          get_all_dates << row[index_required_delivery_date]
+          get_all_dates << row[index_required_delivery_date] rescue nil
           get_all_part_numbers << row[index_part_number]
         end
 
@@ -139,8 +139,8 @@ Mailman::Application.run do
             if part_number == row[index_part_number]
               incoming_rfq_item.quantity += row[index_quantity].to_i
               incoming_rfq_item.description = row[index_description]
-              this_date = (incoming_rfq_american_date.nil? ? Date.strptime(row[index_required_delivery_date], "%d/%m/%Y") : Date.strptime(row[index_required_delivery_date], "%m/%d/%Y"))
-              incoming_rfq_item.required_delivery_date = this_date if incoming_rfq_item.required_delivery_date.nil? || incoming_rfq_item.required_delivery_date > this_date
+              this_date = (incoming_rfq_american_date.nil? ? Date.strptime(row[index_required_delivery_date], "%d/%m/%Y") : Date.strptime(row[index_required_delivery_date], "%m/%d/%Y")) rescue nil
+              incoming_rfq_item.required_delivery_date = this_date if incoming_rfq_item.required_delivery_date.nil? || incoming_rfq_item.required_delivery_date > this_date rescue nil
             end
           end
           # And save it to our DB
