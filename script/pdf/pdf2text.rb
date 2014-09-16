@@ -18,10 +18,10 @@ DRAWING_REGEX = /Related Drawings\s*:.*/
 PSL_REGEX = /PSL\s*:.*/i
 TEMP_REGEX = /Temp\s*:.*/i
 MATERIAL_CLASS_REGEX = /Class\s*:.*/i
-PROCESSES_REGEX = /PROCESS SPECIFICATION\s*:.*/m
-CUSTOMER_SPEC_REGEX1 = /(C|CS|HT|PS|QS|WS)-\d{3}.*/i
+PROCESSES_REGEX = /PROCESS SPECIFICATION\s*:.*Characteristics/m
+CUSTOMER_SPEC_REGEX1 = /(C|CS|HT|MS|PS|QS|WS)-\d{3,4}.*/i
 CUSTOMER_SPEC_REGEX2 = /- - -.*/i
-MATERIAL_SPEC_REGEX1 = /MS-\d{3|4}.*/i
+MATERIAL_SPEC_REGEX1 = /MS-\d{3,4}.*/i
 MATERIAL_SPEC_REGEX2 = /.*MATERIAL REQUIREMENT.*/i
 MATERIAL_SPEC_REGEX3 = /.*ALTERNATE MATERIAL.*/i
 STAMPING_SPEC_REGEX = /PS-126.*/i
@@ -34,9 +34,9 @@ drawing = {}
 # Split up multi-page PDF files
 doc = Poppler::Document.new(input_uri)
 if doc.n_pages == 1
-  IO.popen("copy #{input_uri} pg_0001.pdf") {|f| $stderr.puts "#{f} 1-page PDF file"}
+  IO.popen("copy #{input_uri} pg_1.pdf") {|f| $stderr.puts "#{f} 1-page PDF file"}
 else
-  IO.popen("pdftk #{input_uri} burst") {|f| $stderr.puts "#{f} Split PDF file"}
+  IO.popen("pdftk #{input_uri} burst output pg_%1d.pdf") {|f| $stderr.puts "#{f} Split PDF file"}
   File.delete("doc_data.txt")
 end
 
@@ -48,19 +48,19 @@ doc.each do |page|
     input_drawing_text.concat page.get_text
   else # Or a flattened PDF file that needs to be converted to PNG and run through the OCR engine
     this_page = page.index + 1
-    IO.popen("gswin64c -dSAFER -dNOPAUSE -dBATCH -q -r300 -sDEVICE=pnggray -sOutputFile=pg_000#{this_page}.png pg_000#{this_page}.pdf") {|f| $stderr.puts "#{f} 1st Pass: Convert to 300dpi PNG"}
-    IO.popen("tesseract pg_000#{this_page}.png pg_000#{this_page}") {|f| $stderr.puts "#{f} 1st Pass: OCR"}
-    input_drawing_text.concat File.read("pg_000#{this_page}.txt")
-    File.delete("pg_000#{this_page}.png")
-    File.delete("pg_000#{this_page}.txt")
-    IO.popen("gswin64c -dSAFER -dNOPAUSE -dBATCH -q -r600 -sDEVICE=pnggray -sOutputFile=pg_000#{this_page}.png pg_000#{this_page}.pdf") {|f| $stderr.puts "#{f} 2nd Pass: Convert to 600dpi PNG"}
-    IO.popen("tesseract pg_000#{this_page}.png pg_000#{this_page}") {|f| $stderr.puts "#{f} 2nd Pass: OCR"}
-    input_drawing_text.concat File.read("pg_000#{this_page}.txt")
-    File.delete("pg_000#{this_page}.png")
-    File.delete("pg_000#{this_page}.txt")
+    direction = ["North", "South", "East", "West"]
+    direction.each do |direction|
+      IO.popen("pdftk pg_#{this_page}.pdf cat 1-end#{direction} output pg_#{this_page}#{direction}.pdf") {|f| $stderr.puts "#{f} Page #{this_page} Rotate #{direction}"}
+      IO.popen("gswin64c -dSAFER -dNOPAUSE -dBATCH -q -r300 -sDEVICE=pnggray -sOutputFile=pg_#{this_page}#{direction}.png pg_#{this_page}#{direction}.pdf") {|f| $stderr.puts "#{f} Orientation #{direction}: Convert to 300dpi PNG"}
+      IO.popen("tesseract pg_#{this_page}#{direction}.png pg_#{this_page}#{direction}") {|f| $stderr.puts "#{f} Orientation #{direction}: OCR"}
+      input_drawing_text.concat File.read("pg_#{this_page}#{direction}.txt")
+      File.delete("pg_#{this_page}#{direction}.png")
+      File.delete("pg_#{this_page}#{direction}.txt")
+      File.delete("pg_#{this_page}#{direction}.pdf")
+    end
     drawing["ocr_warning"] = true
   end
-  File.delete("pg_000#{this_page}.pdf") # Remove unwanted files created by the PDF split
+  File.delete("pg_#{this_page}.pdf") # Remove unwanted files created by the PDF split
 end
 
 # Use Regex matching to extract the relevant strings for an Aker BOM
@@ -86,6 +86,7 @@ processes = PROCESSES_REGEX.match(input_bom_text).to_s.split(/\r?\n/)
 
 # Slightly more complicated rules needed to extract the specified processes
 processes.each do |line|
+  puts line
   if CUSTOMER_SPEC_REGEX1.match(line) || CUSTOMER_SPEC_REGEX2.match(line)
     this_process = 'other'
     this_process = 'material' if MATERIAL_SPEC_REGEX1.match(line) || MATERIAL_SPEC_REGEX2.match(line) || MATERIAL_SPEC_REGEX3.match(line)
@@ -96,23 +97,33 @@ processes.each do |line|
     this_process = nil if this_process == 'other'
     this_line = line.to_s.strip
   end
+  puts this_process
 
   if this_process == 'material'
     part["material_specification_short"] << MATERIAL_SPEC_REGEX1.match(line).to_s.split(" ")[0]
     part["material_specification_full"] << this_line
   end
+
   if this_process == 'nde' || this_process == 'other'
-    part["process_specification_short"] << CUSTOMER_SPEC_REGEX1.match(line).to_s.split(" ")[0]
-    part["process_specification_full"] << this_line
+    if CUSTOMER_SPEC_REGEX2.match(line)
+      part["process_specification_short"] << line.to_s.split("- - - ")[1]
+      part["process_specification_full"] << this_line
+    else
+      part["process_specification_short"] << CUSTOMER_SPEC_REGEX1.match(line).to_s.split(" ")[0]
+      part["process_specification_full"] << this_line
+    end
   end
+
   if this_process == 'stamping'
     if /PS-126 STAMP DATE \(MO/i.match(line)
       this_process = nil
       part["stamping_specification_psl"] = true
+    elsif /MATERIAL REPORT/i.match(line)
     else
       part["stamping_specification_full"] << this_line
     end
   end
+
 end
 
 # Bug: The following lines break the script if no BOM
@@ -128,23 +139,25 @@ DRAWING_NUMBER_FORMAT_REGEX = /-\w{3}-/
 match_drawing_number = MATCH_DRAWING_REGEX.match(input_drawing_text).to_s
 if DRAWING_NUMBER_FORMAT_REGEX.match(match_drawing_number)
   drawing["drawing_number"] = match_drawing_number.to_s.split("-")[0].to_s.strip
-  drawing["drawing_revision"] = match_drawing_number.to_s.split(" ")[0].to_s.split("-")[3].to_s.strip
+  drawing["drawing_revision"] = match_drawing_number.to_s.split(" ")[0].to_s.split("-")[3].to_s.strip.gsub("/","")
 else
   drawing["drawing_number"] = match_drawing_number.to_s.split(" ")[0].to_s.strip
-  drawing["drawing_revision"] = match_drawing_number.to_s.split(" ")[1].to_s.strip
+  drawing["drawing_revision"] = match_drawing_number.to_s.split(" ")[1].to_s.strip.gsub("/","")
 end
 puts "ERROR: Drawing Mismatch" if part["drawing_number"]!=drawing["drawing_number"] || part["drawing_revision"]!=drawing["drawing_revision"]
 
 # Define the various Regex patterns expected for specified threads
 drawing["threads"] = []
 ACME_THREAD_REGEX = /\d*\s?\d+\/?\d*-\d+ (ACME|NA|STUB ACME|SA)-\d\w(-LH)?/i
-API_THREAD_REGEX = /\d*\s?-?\d+\/?\d* (API IF|API LP|API UPTBG|IF[^C]|NPT|EU)/i
+API_THREAD_REGEX1 = /\d*\s?-?\d+\/?\d* (API LP|NPT)/i
+API_THREAD_REGEX2 = /\d*\s?-?\d+\/\d+ (API IF|API UPTBG|IF[^C]|NC-\d{2}|EU)/i
 SHARPVEE_THREAD_REGEX = /SHARP VEE THD/i
 UN_THREAD_REGEX = /\d*\s?\d+\/?\d*-\d+ (UN|UNC|UNF|UNS)-\d\w/i
 
 input_drawing_text.to_s.split(/\r?\n/).each do |line|
   drawing["threads"] << ACME_THREAD_REGEX.match(line).to_s.strip if ACME_THREAD_REGEX.match(line)
-  drawing["threads"] << API_THREAD_REGEX.match(line).to_s.strip if API_THREAD_REGEX.match(line)
+  drawing["threads"] << API_THREAD_REGEX1.match(line).to_s.strip if API_THREAD_REGEX1.match(line)
+  drawing["threads"] << API_THREAD_REGEX2.match(line).to_s.strip if API_THREAD_REGEX2.match(line)
   drawing["threads"] << SHARPVEE_THREAD_REGEX.match(line).to_s.strip if SHARPVEE_THREAD_REGEX.match(line)
   drawing["threads"] << UN_THREAD_REGEX.match(line).to_s.strip if UN_THREAD_REGEX.match(line)
 end
