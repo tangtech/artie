@@ -1,6 +1,8 @@
 namespace :db do
 
   task populate: :environment do
+    User.delete_all
+
     system_admin = User.create!(name: "Nathanael Lin",
                                 email: "nathanael.lin@tangtechnical.com",
                                 password: "tangtech",
@@ -17,8 +19,8 @@ namespace :db do
     sales_manager.toggle!(:internal_user_part_approver)
     sales_manager.toggle!(:internal_user_rfq_approver)
 
-    internal_user = User.create!(name: "Ben Xin",
-                                 email: "ben.xin@tangtechnical.com",
+    internal_user = User.create!(name: "Steven Zhang",
+                                 email: "steven.zhang@tangtechnical.com",
                                  password: "tangtech",
                                  password_confirmation: "tangtech")
     internal_user.toggle!(:internal_user)
@@ -29,8 +31,8 @@ namespace :db do
                                  password_confirmation: "tangtech")
     internal_user.toggle!(:internal_user)
 
-    internal_user = User.create!(name: "May Wong",
-                                 email: "may.wong@tangtechnical.com",
+    internal_user = User.create!(name: "Choo Yeow Chun",
+                                 email: "choo.yeowchun@tangtechnical.com",
                                  password: "tangtech",
                                  password_confirmation: "tangtech")
     internal_user.toggle!(:internal_user)
@@ -46,6 +48,8 @@ namespace :db do
                                  password: "tangtech",
                                  password_confirmation: "tangtech")
     internal_user.toggle!(:internal_user)
+
+    Customer.delete_all
 
     Customer.create!(name: "PT Aker Solutions",
                      short_name: "Aker",
